@@ -1271,7 +1271,7 @@ function showLoading(show){
     if(!ind){
       ind = document.createElement('span');
       ind.id = 'loading-ind';
-      ind.style.cssText = 'font-size:.55rem;color:var(--m2);font-weight:600;animation:pulse 1s infinite;';
+      ind.style.cssText = 'font-size:.55rem;color:var(--m2);font-weight:600;';
       ind.textContent = '↻ Sincronizando...';
       tb.appendChild(ind);
     }
@@ -1280,15 +1280,35 @@ function showLoading(show){
   }
 }
 
-async function apiGet(){
-  const res = await fetch(API_URL + '?action=get', {method:'GET'});
-  const data = await res.json();
-  return data.tasks || [];
+// GET via JSONP (único método que bypassa CORS no Apps Script publicado)
+function apiGet(){
+  return new Promise((resolve, reject) => {
+    const cbName = 'dmgCb_' + Date.now();
+    const script = document.createElement('script');
+    const timeout = setTimeout(() => {
+      delete window[cbName];
+      script.remove();
+      reject(new Error('Timeout ao carregar tarefas'));
+    }, 10000);
+    window[cbName] = function(data) {
+      clearTimeout(timeout);
+      delete window[cbName];
+      script.remove();
+      resolve(data.tasks || []);
+    };
+    script.src = API_URL + '?action=get&callback=' + cbName;
+    script.onerror = () => {
+      clearTimeout(timeout);
+      delete window[cbName];
+      reject(new Error('Erro de rede'));
+    };
+    document.head.appendChild(script);
+  });
 }
 
 async function apiSave(task){
   const res = await fetch(API_URL, {
-    method:'POST',
+    method: 'POST',
     body: JSON.stringify({action:'save', task}),
   });
   return res.json();
@@ -1296,7 +1316,7 @@ async function apiSave(task){
 
 async function apiDelete(id){
   const res = await fetch(API_URL, {
-    method:'POST',
+    method: 'POST',
     body: JSON.stringify({action:'delete', id}),
   });
   return res.json();
