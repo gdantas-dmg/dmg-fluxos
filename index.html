@@ -1231,13 +1231,17 @@ function exportPDF(){
   iframe.srcdoc=fullHtml;
 }
 
+
 // ═══════════════════════════════════════════════════════════════
-// TASK MODULE
+// TASK MODULE — Google Sheets backend
 // ═══════════════════════════════════════════════════════════════
+const API_URL = 'https://script.google.com/macros/s/AKfycby5uFCYBPrWU7V-KU4qpSTgOMLV33ssdUv9COA4XSFOSTgp2IC2J-qdS3kXeTiOgroIaw/exec';
+
 let currentMod = 'flows';
 let currentTaskView = 'kanban';
 let editingTaskId = null;
 let tasks = [];
+let tasksLoading = false;
 
 // ── MODULE SWITCH ─────────────────────────────────────────────
 function switchMod(mod){
@@ -1247,7 +1251,7 @@ function switchMod(mod){
   document.getElementById('mod-flows').classList.toggle('active', mod==='flows');
   document.getElementById('mod-tasks').classList.toggle('active', mod==='tasks');
   document.getElementById('tb-sub').textContent = mod==='flows' ? 'Fluxos Operacionais' : 'Tarefas';
-  if(mod==='tasks'){ loadTasks(); }
+  if(mod==='tasks') loadTasks();
 }
 
 function switchTaskView(view){
@@ -1259,24 +1263,79 @@ function switchTaskView(view){
   renderTasks();
 }
 
-// ── STORAGE ───────────────────────────────────────────────────
-async function loadTasks(){
-  try {
-    const res = await window.storage.get('dmg-tasks', true);
-    tasks = res ? JSON.parse(res.value) : [];
-  } catch(e){ tasks = []; }
-  updateRespFilter();
-  renderTasks();
+// ── API ───────────────────────────────────────────────────────
+function showLoading(show){
+  const tb = document.getElementById('task-toolbar');
+  let ind = document.getElementById('loading-ind');
+  if(show){
+    if(!ind){
+      ind = document.createElement('span');
+      ind.id = 'loading-ind';
+      ind.style.cssText = 'font-size:.55rem;color:var(--m2);font-weight:600;animation:pulse 1s infinite;';
+      ind.textContent = '↻ Sincronizando...';
+      tb.appendChild(ind);
+    }
+  } else {
+    if(ind) ind.remove();
+  }
 }
 
-async function saveTasks(){
-  try { await window.storage.set('dmg-tasks', JSON.stringify(tasks), true); }
-  catch(e){ console.error('storage error:', e); }
+async function apiGet(){
+  const res = await fetch(API_URL + '?action=get', {method:'GET'});
+  const data = await res.json();
+  return data.tasks || [];
+}
+
+async function apiSave(task){
+  const res = await fetch(API_URL, {
+    method:'POST',
+    body: JSON.stringify({action:'save', task}),
+  });
+  return res.json();
+}
+
+async function apiDelete(id){
+  const res = await fetch(API_URL, {
+    method:'POST',
+    body: JSON.stringify({action:'delete', id}),
+  });
+  return res.json();
+}
+
+async function loadTasks(){
+  if(tasksLoading) return;
+  tasksLoading = true;
+  showLoading(true);
+  try {
+    tasks = await apiGet();
+    updateRespFilter();
+    renderTasks();
+  } catch(e){
+    console.error('Erro ao carregar tarefas:', e);
+    showError('Não foi possível carregar as tarefas. Verifique a conexão.');
+  } finally {
+    tasksLoading = false;
+    showLoading(false);
+  }
+}
+
+function showError(msg){
+  const tb = document.getElementById('task-toolbar');
+  let err = document.getElementById('task-error');
+  if(!err){
+    err = document.createElement('span');
+    err.id = 'task-error';
+    err.style.cssText = 'font-size:.55rem;color:#9E3A2A;font-weight:600;background:rgba(176,32,32,.08);padding:3px 10px;border-radius:4px;border:1px solid #E8A898;';
+    tb.appendChild(err);
+    setTimeout(()=>err.remove(), 5000);
+  }
+  err.textContent = '⚠ ' + msg;
 }
 
 // ── FILTERS ───────────────────────────────────────────────────
 function updateRespFilter(){
   const sel = document.getElementById('filter-resp');
+  if(!sel) return;
   const cur = sel.value;
   const resps = [...new Set(tasks.map(t=>t.resp).filter(Boolean))].sort();
   sel.innerHTML = '<option value="">Todos</option>' + resps.map(r=>`<option value="${r}"${r===cur?' selected':''}>${r}</option>`).join('');
@@ -1300,12 +1359,10 @@ function renderTasks(){
   else renderList();
 }
 
-function isOverdue(prazo){ return prazo && new Date(prazo) < new Date() && true; }
-
+function isOverdue(prazo){ return prazo && new Date(prazo) < new Date(); }
 function prioLabel(p){ return p==='alta'?'Alta':p==='media'?'Média':'Baixa'; }
 function statusLabel(s){ return s==='todo'?'A fazer':s==='doing'?'Em andamento':'Concluído'; }
 function statusClass(s){ return s==='todo'?'s-todo':s==='doing'?'s-doing':'s-done'; }
-
 function fmtDate(d){
   if(!d) return '';
   const dt = new Date(d+'T00:00:00');
@@ -1318,7 +1375,7 @@ function taskCard(t){
     <div class="tc-actions">
       <button class="tc-btn" onclick="event.stopPropagation();moveTask('${t.id}',-1)" title="← Anterior">‹</button>
       <button class="tc-btn" onclick="event.stopPropagation();moveTask('${t.id}',1)" title="Próximo →">›</button>
-      <button class="tc-btn" onclick="event.stopPropagation();deleteTask('${t.id}')" title="Excluir" style="color:#f87;">×</button>
+      <button class="tc-btn" onclick="event.stopPropagation();deleteTask('${t.id}')" style="color:#f87;" title="Excluir">×</button>
     </div>
     <div class="tc-title">${t.titulo}</div>
     <div class="tc-meta">
@@ -1335,8 +1392,12 @@ function renderKanban(){
   const cols = {todo:[],doing:[],done:[]};
   ft.forEach(t=>{ if(cols[t.status]) cols[t.status].push(t); });
   ['todo','doing','done'].forEach(s=>{
-    document.getElementById('kb-'+s).innerHTML = cols[s].map(taskCard).join('');
-    document.getElementById('cnt-'+s).textContent = cols[s].length;
+    const el = document.getElementById('kb-'+s);
+    if(el) el.innerHTML = cols[s].length
+      ? cols[s].map(taskCard).join('')
+      : `<div style="text-align:center;padding:24px 12px;font-size:.6rem;color:var(--m2);">Nenhuma tarefa</div>`;
+    const cnt = document.getElementById('cnt-'+s);
+    if(cnt) cnt.textContent = cols[s].length;
   });
 }
 
@@ -1362,13 +1423,18 @@ function renderList(){
 
 // ── STATUS MOVE ───────────────────────────────────────────────
 const STATUS_ORDER = ['todo','doing','done'];
-function moveTask(id, dir){
+async function moveTask(id, dir){
   const t = tasks.find(t=>t.id===id); if(!t) return;
   const idx = STATUS_ORDER.indexOf(t.status);
   const next = idx+dir;
   if(next<0||next>=STATUS_ORDER.length) return;
   t.status = STATUS_ORDER[next];
-  saveTasks(); renderTasks();
+  t.updatedAt = new Date().toISOString();
+  renderTasks();
+  showLoading(true);
+  try { await apiSave(t); }
+  catch(e){ showError('Erro ao salvar. Tente novamente.'); }
+  finally { showLoading(false); }
 }
 
 // ── CRUD ──────────────────────────────────────────────────────
@@ -1386,37 +1452,78 @@ function openTaskModal(id){
   setTimeout(()=>document.getElementById('tm-titulo').focus(),100);
 }
 
-function closeTaskModal(){ document.getElementById('task-modal-bg').classList.remove('on'); editingTaskId=null; }
+function closeTaskModal(){
+  document.getElementById('task-modal-bg').classList.remove('on');
+  editingTaskId = null;
+}
 
 async function saveTask(){
   const titulo = document.getElementById('tm-titulo').value.trim();
-  if(!titulo){ document.getElementById('tm-titulo').style.borderColor='#E8A898'; return; }
+  if(!titulo){
+    document.getElementById('tm-titulo').style.borderColor='#E8A898';
+    document.getElementById('tm-titulo').focus();
+    return;
+  }
   document.getElementById('tm-titulo').style.borderColor='';
-  const data = {
+  const task = {
     id: editingTaskId||('tk'+Date.now()),
     titulo,
-    resp:   document.getElementById('tm-resp').value.trim(),
-    prazo:  document.getElementById('tm-prazo').value,
-    prio:   document.getElementById('tm-prio').value,
-    status: document.getElementById('tm-status').value,
-    desc:   document.getElementById('tm-desc').value.trim(),
+    resp:      document.getElementById('tm-resp').value.trim(),
+    prazo:     document.getElementById('tm-prazo').value,
+    prio:      document.getElementById('tm-prio').value,
+    status:    document.getElementById('tm-status').value,
+    desc:      document.getElementById('tm-desc').value.trim(),
     updatedAt: new Date().toISOString(),
   };
-  if(editingTaskId){ const idx=tasks.findIndex(t=>t.id===editingTaskId); if(idx>=0) tasks[idx]=data; else tasks.push(data); }
-  else { tasks.push(data); }
+
+  // update local immediately
+  if(editingTaskId){
+    const idx = tasks.findIndex(t=>t.id===editingTaskId);
+    if(idx>=0) tasks[idx]=task; else tasks.push(task);
+  } else {
+    tasks.push(task);
+  }
+
   closeTaskModal();
-  await saveTasks();
   updateRespFilter();
   renderTasks();
+
+  // persist to sheets
+  showLoading(true);
+  try {
+    await apiSave(task);
+  } catch(e){
+    showError('Tarefa salva localmente mas erro ao sincronizar. Tente novamente.');
+  } finally {
+    showLoading(false);
+  }
 }
 
 async function deleteTask(id){
   if(!confirm('Excluir esta tarefa?')) return;
   tasks = tasks.filter(t=>t.id!==id);
-  await saveTasks(); updateRespFilter(); renderTasks();
+  updateRespFilter();
+  renderTasks();
+  showLoading(true);
+  try { await apiDelete(id); }
+  catch(e){ showError('Erro ao excluir na planilha.'); }
+  finally { showLoading(false); }
 }
 
-// keyboard shortcut: N = nova tarefa quando no módulo de tarefas
+// ── REFRESH BUTTON ────────────────────────────────────────────
+// add refresh button to task toolbar on first load
+document.addEventListener('DOMContentLoaded', ()=>{
+  const tb = document.getElementById('task-toolbar');
+  if(tb){
+    const sep = document.createElement('div'); sep.className='ttb-sep'; tb.appendChild(sep);
+    const btn = document.createElement('button');
+    btn.className='btn btn-e'; btn.style.fontSize='.56rem';
+    btn.textContent='↺ Atualizar'; btn.onclick=loadTasks;
+    tb.appendChild(btn);
+  }
+});
+
+// keyboard shortcut N = nova tarefa
 document.addEventListener('keydown', function(e){
   if(currentMod==='tasks' && e.key==='n' && !e.target.isContentEditable && e.target.tagName!=='INPUT' && e.target.tagName!=='TEXTAREA' && e.target.tagName!=='SELECT'){
     openTaskModal();
