@@ -1299,11 +1299,14 @@ async function apiGet(){
 }
 
 async function apiSave(task){
-  // delete existing then insert fresh
-  await fetch(SUPA_URL + '/rest/v1/tarefas?id=eq.' + encodeURIComponent(task.id), {
-    method: 'DELETE',
-    headers: supaHeaders(),
-  });
+  // try delete first (ignore errors if not found)
+  try {
+    await fetch(SUPA_URL + '/rest/v1/tarefas?id=eq.' + encodeURIComponent(task.id), {
+      method: 'DELETE',
+      headers: supaHeaders(),
+    });
+  } catch(e){ /* ignora */ }
+  // insert
   const res = await fetch(SUPA_URL + '/rest/v1/tarefas', {
     method: 'POST',
     headers: { ...supaHeaders(), 'Prefer': 'return=representation' },
