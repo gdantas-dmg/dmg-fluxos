@@ -1280,30 +1280,14 @@ function showLoading(show){
   }
 }
 
-// GET via JSONP (único método que bypassa CORS no Apps Script publicado)
-function apiGet(){
-  return new Promise((resolve, reject) => {
-    const cbName = 'dmgCb_' + Date.now();
-    const script = document.createElement('script');
-    const timeout = setTimeout(() => {
-      delete window[cbName];
-      script.remove();
-      reject(new Error('Timeout ao carregar tarefas'));
-    }, 10000);
-    window[cbName] = function(data) {
-      clearTimeout(timeout);
-      delete window[cbName];
-      script.remove();
-      resolve(data.tasks || []);
-    };
-    script.src = API_URL + '?action=get&callback=' + cbName;
-    script.onerror = () => {
-      clearTimeout(timeout);
-      delete window[cbName];
-      reject(new Error('Erro de rede'));
-    };
-    document.head.appendChild(script);
-  });
+// GET via proxy AllOrigins (resolve CORS do Apps Script)
+async function apiGet(){
+  const target = encodeURIComponent(API_URL + '?action=get');
+  const proxy  = 'https://api.allorigins.win/get?url=' + target;
+  const res    = await fetch(proxy);
+  const json   = await res.json();
+  const data   = JSON.parse(json.contents);
+  return data.tasks || [];
 }
 
 async function apiSave(task){
