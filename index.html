@@ -1333,8 +1333,14 @@ async function loadTasks(){
   tasksLoading = true;
   showLoading(true);
   try {
-    tasks = await apiGet();
+    const result = await apiGet();
+    tasks = Array.isArray(result) ? result : [];
     updateRespFilter();
+    // garantir que kanban/lista estão visíveis antes de renderizar
+    const kv = document.getElementById('kanban-view');
+    const lv = document.getElementById('list-view');
+    if(kv) kv.style.display = currentTaskView==='kanban' ? 'flex' : 'none';
+    if(lv) lv.style.display = currentTaskView==='list' ? 'block' : 'none';
     renderTasks();
   } catch(e){
     console.error('Erro ao carregar tarefas:', e);
