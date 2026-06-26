@@ -1299,13 +1299,20 @@ async function apiGet(){
 }
 
 async function apiSave(task){
-  // upsert: insert or update by id
-  const res = await fetch(SUPA_URL + '/rest/v1/tarefas?on_conflict=id', {
+  // delete existing then insert fresh
+  await fetch(SUPA_URL + '/rest/v1/tarefas?id=eq.' + encodeURIComponent(task.id), {
+    method: 'DELETE',
+    headers: supaHeaders(),
+  });
+  const res = await fetch(SUPA_URL + '/rest/v1/tarefas', {
     method: 'POST',
-    headers: { ...supaHeaders(), 'Prefer': 'resolution=merge-duplicates,return=representation' },
+    headers: { ...supaHeaders(), 'Prefer': 'return=representation' },
     body: JSON.stringify(task),
   });
-  if(!res.ok) throw new Error('Erro ' + res.status);
+  if(!res.ok){
+    const err = await res.text();
+    throw new Error('Erro ' + res.status + ': ' + err);
+  }
   return res.json();
 }
 
