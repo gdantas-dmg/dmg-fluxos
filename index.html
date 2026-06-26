@@ -1235,7 +1235,8 @@ function exportPDF(){
 // ═══════════════════════════════════════════════════════════════
 // TASK MODULE — Google Sheets backend
 // ═══════════════════════════════════════════════════════════════
-const API_URL = 'https://script.google.com/macros/s/AKfycby5uFCYBPrWU7V-KU4qpSTgOMLV33ssdUv9COA4XSFOSTgp2IC2J-qdS3kXeTiOgroIaw/exec';
+const SUPA_URL = 'https://rhlnhcphykadtamirgbh.supabase.co';
+const SUPA_KEY = 'sb_publishable_vBtOTt1ikRK8HbYM53A3Mg_1WP85pgN';
 
 let currentMod = 'flows';
 let currentTaskView = 'kanban';
@@ -1263,7 +1264,16 @@ function switchTaskView(view){
   renderTasks();
 }
 
-// ── API ───────────────────────────────────────────────────────
+// ── API — Supabase ────────────────────────────────────────────
+function supaHeaders(){
+  return {
+    'apikey': SUPA_KEY,
+    'Authorization': 'Bearer ' + SUPA_KEY,
+    'Content-Type': 'application/json',
+    'Prefer': 'return=representation',
+  };
+}
+
 function showLoading(show){
   const tb = document.getElementById('task-toolbar');
   let ind = document.getElementById('loading-ind');
@@ -1280,30 +1290,32 @@ function showLoading(show){
   }
 }
 
-// GET via proxy AllOrigins (resolve CORS do Apps Script)
 async function apiGet(){
-  const target = encodeURIComponent(API_URL + '?action=get');
-  const proxy  = 'https://api.allorigins.win/get?url=' + target;
-  const res    = await fetch(proxy);
-  const json   = await res.json();
-  const data   = JSON.parse(json.contents);
-  return data.tasks || [];
+  const res = await fetch(SUPA_URL + '/rest/v1/tarefas?select=*&order=updated_at.desc', {
+    headers: supaHeaders()
+  });
+  if(!res.ok) throw new Error('Erro ' + res.status);
+  return res.json();
 }
 
 async function apiSave(task){
-  const res = await fetch(API_URL, {
+  // upsert: insert or update by id
+  const res = await fetch(SUPA_URL + '/rest/v1/tarefas?on_conflict=id', {
     method: 'POST',
-    body: JSON.stringify({action:'save', task}),
+    headers: { ...supaHeaders(), 'Prefer': 'resolution=merge-duplicates,return=representation' },
+    body: JSON.stringify(task),
   });
+  if(!res.ok) throw new Error('Erro ' + res.status);
   return res.json();
 }
 
 async function apiDelete(id){
-  const res = await fetch(API_URL, {
-    method: 'POST',
-    body: JSON.stringify({action:'delete', id}),
+  const res = await fetch(SUPA_URL + '/rest/v1/tarefas?id=eq.' + encodeURIComponent(id), {
+    method: 'DELETE',
+    headers: supaHeaders(),
   });
-  return res.json();
+  if(!res.ok) throw new Error('Erro ' + res.status);
+  return { ok: true };
 }
 
 async function loadTasks(){
