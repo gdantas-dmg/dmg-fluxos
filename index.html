@@ -658,6 +658,19 @@ function buildBpmnH(){
 // ═══════════════════════════════════════════════════════════════
 // INIT
 // ═══════════════════════════════════════════════════════════════
+
+function buildBpmnServicoAvulso(){
+  const L=[
+    {l:'Cliente / Atendimento', b:`${bOval('Início')}${aV('',12)}${bRect('Solicita serviço<br>pontual fora do<br>escopo (ex: treinamento)')}${aV('',12)}${bDiamond('Cliente já possui<br>contrato ativo?')}<div style="position:absolute;right:6px;top:160px;font-size:.44rem;color:#A06B1A;font-weight:700;text-align:right;">Não →</div>`},
+    {l:'Comercial (sem contrato)', b:`${cA('Não')}${bCoral('Tratar como<br>prestação autônoma')}${aV('',12)}${bDoc('Proposta/Contrato<br>simplificado avulso<br>(sem vínculo)')}${aV('',12)}${cA('seguir p/ envio')}`},
+    {l:'Comercial', b:`${cA('Sim')}${bRect('Levantar dados da<br>demanda: tipo, carga<br>horária, local, prazo, valor')}${aV('',12)}${bDoc('Proposta/Orçamento<br>avulso vinculado ao<br>contrato-mãe')}${aV('',12)}${bRect('Enviar proposta<br>ao cliente<br>(e-mail ou físico)')}${aV('',12)}${cA()}`},
+    {l:'Cliente', b:`${cA()}${bDiamond('Cliente assina /<br>dá aceite?')}<div style="position:absolute;right:6px;top:80px;font-size:.44rem;color:#9E3A2A;text-align:right;line-height:1.5;">Não →<br>negociar ajustes<br>(retorna p/ proposta)</div>${aV('Sim',12)}${bRect('Proposta assinada<br>por ambas as partes')}${aV('',12)}${cA()}`},
+    {l:'Atendimento / Operacional', b:`${cA()}${bDoc('Anexar proposta<br>assinada no sistema/<br>pasta do cliente')}${aV('',12)}${bRect('Programar execução<br>(alocar profissional<br>responsável)')}${aV('',12)}${bRect('Executar<br>serviço')}${aV('',12)}${cA()}`},
+    {l:'Faturamento', b:`${cA()}${bPurple('Emitir NF referente<br>ao serviço avulso')}${aV('',12)}${bDoc('Arquivar: proposta<br>assinada + comprovante<br>de execução + NF')}${aV('',12)}${bOval('Fim')}`},
+  ];
+  return `<div class="bpmn-wrap"><div class="bpmn-hdr"><h2>Serviço Pontual Fora do Escopo (Avulso)</h2><span>Fluxo left-right · Swim lanes por papel</span></div><div style="display:flex;overflow-x:auto;">${L.map(l=>`<div class="sl-lane"><div class="sl-hdr">${l.l}</div><div class="sl-body">${l.b}</div></div>`).join('')}</div>${bLeg()}</div>`;
+}
+
 (function init(){
   const hash = location.hash.slice(1);
   if(hash){
@@ -679,6 +692,7 @@ function loadDef(){
     {id:'aso', name:'Atendimento ASO', nodes:JSON.parse(JSON.stringify(ASO_NODES)), edges:JSON.parse(JSON.stringify(ASO_EDGES)), transcript:[...DEFAULT_TRANSCRIPT]},
     {id:'aso-v', name:'ASO — Vertical',   bpmn:'buildBpmnV'},
     {id:'aso-h', name:'ASO — Horizontal', bpmn:'buildBpmnH'},
+    {id:'servico-avulso', name:'Serviço Avulso', bpmn:'buildBpmnServicoAvulso'},
   ];
 }
 
