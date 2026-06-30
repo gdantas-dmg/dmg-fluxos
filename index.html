@@ -169,11 +169,11 @@ body{font-family:'Sora',sans-serif;background:var(--bg);color:var(--ink);height:
 .bpmn-hdr h2{font-size:.72rem;font-weight:700;letter-spacing:.8px;text-transform:uppercase;color:#fff;}
 .bpmn-hdr span{font-size:.56rem;color:rgba(154,206,211,.6);}
 .bpmn-leg{display:flex;gap:14px;flex-wrap:wrap;padding:10px 20px;background:var(--surface);border-top:1px solid var(--rule);font-size:.58rem;font-weight:600;color:var(--m1);}
-.slv-lane{display:flex;border-bottom:1px solid var(--rule);min-height:120px;}
+.slv-lane{display:flex;border-bottom:1px solid var(--rule);min-height:130px;}
 .slv-lane:last-child{border-bottom:none;}
 .slv-hdr{width:52px;flex-shrink:0;background:var(--t2);border-right:2px solid var(--t1);display:flex;align-items:center;justify-content:center;}
 .slv-hdr span{font-size:.46rem;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:var(--t0);writing-mode:vertical-rl;transform:rotate(180deg);}
-.slv-body{flex:1;padding:24px 20px;display:flex;flex-direction:row;align-items:center;flex-wrap:nowrap;overflow-x:auto;overflow-y:visible;min-height:120px;}
+.slv-body{flex:1;padding:28px 24px;display:flex;flex-direction:row;align-items:center;flex-wrap:nowrap;overflow-x:auto;overflow-y:visible;min-height:130px;gap:0;}
 .sl-lane{flex:1;min-width:155px;border-right:1px solid var(--rule);display:flex;flex-direction:column;}
 .sl-lane:last-child{border-right:none;}
 .sl-hdr{background:var(--t2);border-bottom:2px solid var(--t1);padding:10px 8px;text-align:center;font-size:.5rem;font-weight:700;letter-spacing:1.2px;text-transform:uppercase;color:var(--t0);min-height:40px;display:flex;align-items:center;justify-content:center;}
@@ -195,10 +195,10 @@ body{font-family:'Sora',sans-serif;background:var(--bg);color:var(--ink);height:
 .av .al{width:1.5px;background:rgba(49,129,140,.4);min-height:14px;}
 .av .avh{width:0;height:0;border-left:5px solid transparent;border-right:5px solid transparent;border-top:7px solid rgba(49,129,140,.5);}
 .av .lbl{font-size:.48rem;font-weight:700;color:var(--m2);white-space:nowrap;}
-.ca{display:inline-flex;flex-direction:column;align-items:center;flex-shrink:0;}
-.ca .al{width:1.5px;background:rgba(215,183,134,.5);min-height:18px;}
-.ca .cah{width:0;height:0;border-left:5px solid transparent;border-right:5px solid transparent;border-top:7px solid rgba(215,183,134,.6);}
-.ca .lbl{font-size:.46rem;font-weight:700;color:var(--gold2);white-space:nowrap;}
+.ca{display:inline-flex;flex-direction:column;align-items:center;flex-shrink:0;margin:0 4px;position:relative;z-index:10;}
+.ca .al{width:1.5px;background:#C9A873;min-height:22px;}
+.ca .cah{width:0;height:0;border-left:5px solid transparent;border-right:5px solid transparent;border-top:7px solid #C9A873;}
+.ca .lbl{font-size:.46rem;font-weight:700;color:var(--gold2);white-space:nowrap;background:#fff;padding:0 2px;border-radius:2px;}
 
 /* ── EDGE HANDLES ── */
 .ehandle{cursor:grab;transition:r .1s;}
@@ -1509,7 +1509,7 @@ async function moveTask(id, dir){
   const next = idx+dir;
   if(next<0||next>=STATUS_ORDER.length) return;
   t.status = STATUS_ORDER[next];
-  t.updatedAt = new Date().toISOString();
+  t.updated_at = new Date().toISOString();
   renderTasks();
   showLoading(true);
   try { await apiSave(t); }
@@ -1548,12 +1548,12 @@ async function saveTask(){
   const task = {
     id: editingTaskId||('tk'+Date.now()),
     titulo,
-    resp:      document.getElementById('tm-resp').value.trim(),
-    prazo:     document.getElementById('tm-prazo').value,
-    prio:      document.getElementById('tm-prio').value,
-    status:    document.getElementById('tm-status').value,
-    desc:      document.getElementById('tm-desc').value.trim(),
-    updatedAt: new Date().toISOString(),
+    resp:       document.getElementById('tm-resp').value.trim(),
+    prazo:      document.getElementById('tm-prazo').value,
+    prio:       document.getElementById('tm-prio').value,
+    status:     document.getElementById('tm-status').value,
+    desc:       document.getElementById('tm-desc').value.trim(),
+    updated_at: new Date().toISOString(),
   };
 
   // update local immediately
