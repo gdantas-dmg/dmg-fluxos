@@ -179,14 +179,14 @@ body{font-family:'Sora',sans-serif;background:var(--bg);color:var(--ink);height:
 .sl-hdr{background:var(--t2);border-bottom:2px solid var(--t1);padding:10px 8px;text-align:center;font-size:.5rem;font-weight:700;letter-spacing:1.2px;text-transform:uppercase;color:var(--t0);min-height:40px;display:flex;align-items:center;justify-content:center;}
 .sl-body{flex:1;padding:18px 12px;display:flex;flex-direction:column;align-items:center;position:relative;min-height:480px;}
 .bn-oval{display:inline-flex;align-items:center;justify-content:center;border-radius:50px;padding:9px 18px;min-width:80px;background:var(--dark);color:var(--t0);border:2px solid var(--t0);font-size:.65rem;font-weight:700;text-align:center;flex-shrink:0;}
-.bn-rect{display:inline-flex;align-items:center;justify-content:center;border-radius:6px;padding:9px 12px;width:124px;background:rgba(49,129,140,.1);color:var(--t2);border:1.5px solid var(--t1);font-size:.62rem;font-weight:600;line-height:1.3;text-align:center;flex-shrink:0;}
+.bn-rect{display:inline-flex;align-items:center;justify-content:center;border-radius:6px;padding:10px 14px;width:152px;background:#E1F2F0;color:var(--t2);border:1.5px solid var(--t1);font-size:.65rem;font-weight:600;line-height:1.4;text-align:center;flex-shrink:0;}
 .bn-dw{width:88px;height:72px;position:relative;display:inline-flex;align-items:center;justify-content:center;flex-shrink:0;}
 .bn-di{width:66px;height:66px;background:#FDF1E3;border:1.5px solid #E8C97A;transform:rotate(45deg);position:absolute;}
 .bn-dt{position:relative;font-size:.54rem;font-weight:700;color:#A06B1A;text-align:center;max-width:72px;z-index:1;line-height:1.25;}
-.bn-doc{display:inline-flex;align-items:center;justify-content:center;border-radius:4px 4px 0 0;padding:9px 10px;min-width:90px;background:#FAF1E2;color:#8B5E20;border:1.5px solid var(--gold);font-size:.62rem;font-weight:600;line-height:1.3;text-align:center;flex-shrink:0;position:relative;margin-bottom:8px;}
+.bn-doc{display:inline-flex;align-items:center;justify-content:center;border-radius:4px 4px 0 0;padding:10px 12px;min-width:120px;background:#FAF1E2;color:#8B5E20;border:1.5px solid var(--gold);font-size:.65rem;font-weight:600;line-height:1.4;text-align:center;flex-shrink:0;position:relative;margin-bottom:8px;}
 .bn-doc::after{content:'';position:absolute;bottom:-7px;left:-1px;right:-1px;height:8px;background:#FAF1E2;border:1.5px solid var(--gold);border-top:none;border-radius:0 0 4px 4px;}
-.bn-coral{display:inline-flex;align-items:center;justify-content:center;border-radius:6px;padding:9px 10px;min-width:90px;max-width:120px;background:#FBE7E4;color:#9E3A2A;border:1.5px solid #E8A898;font-size:.62rem;font-weight:600;line-height:1.3;text-align:center;flex-shrink:0;}
-.bn-purple{display:inline-flex;align-items:center;justify-content:center;border-radius:6px;padding:9px 12px;min-width:100px;background:#EEE7FA;color:#5B3FA0;border:1.5px solid #B8A8E0;font-size:.62rem;font-weight:600;line-height:1.3;text-align:center;flex-shrink:0;}
+.bn-coral{display:inline-flex;align-items:center;justify-content:center;border-radius:6px;padding:10px 12px;min-width:120px;max-width:150px;background:#FBE7E4;color:#9E3A2A;border:1.5px solid #E8A898;font-size:.64rem;font-weight:600;line-height:1.4;text-align:center;flex-shrink:0;}
+.bn-purple{display:inline-flex;align-items:center;justify-content:center;border-radius:6px;padding:10px 14px;min-width:140px;background:#EEE7FA;color:#5B3FA0;border:1.5px solid #B8A8E0;font-size:.64rem;font-weight:600;line-height:1.4;text-align:center;flex-shrink:0;}
 .ah{display:inline-flex;align-items:center;flex-shrink:0;position:relative;}
 .ah .al{height:1.5px;background:rgba(49,129,140,.4);min-width:20px;}
 .ah .ah{width:0;height:0;border-top:5px solid transparent;border-bottom:5px solid transparent;border-left:7px solid rgba(49,129,140,.5);}
@@ -796,15 +796,33 @@ function renderCanvas(){
 let handleDrag = null;
 // handleDrag = {type:'ctrl'|'src'|'dst', edgeIdx, startX, startY}
 
-function nodePt(n, side){
-  if(!side || side==='auto') {
-    return {x:n.x+n.w/2, y:n.y+n.h/2};
+function nodeRect(n){
+  // usa a posição/tamanho REAL renderizado no DOM (cobre casos de min-height crescer o card)
+  const el = document.getElementById('nd-' + n.id);
+  if(el){
+    const wrap = document.getElementById('canvas-wrap');
+    const wrapRect = wrap.getBoundingClientRect();
+    const elRect = el.getBoundingClientRect();
+    return {
+      x: elRect.left - wrapRect.left + wrap.scrollLeft,
+      y: elRect.top - wrapRect.top + wrap.scrollTop,
+      w: elRect.width,
+      h: elRect.height,
+    };
   }
-  if(side==='top')    return {x:n.x+n.w/2, y:n.y};
-  if(side==='bottom') return {x:n.x+n.w/2, y:n.y+n.h};
-  if(side==='left')   return {x:n.x,        y:n.y+n.h/2};
-  if(side==='right')  return {x:n.x+n.w,    y:n.y+n.h/2};
-  return {x:n.x+n.w/2, y:n.y+n.h/2};
+  return { x:n.x, y:n.y, w:n.w, h:n.h };
+}
+
+function nodePt(n, side){
+  const r = nodeRect(n);
+  if(!side || side==='auto') {
+    return {x:r.x+r.w/2, y:r.y+r.h/2};
+  }
+  if(side==='top')    return {x:r.x+r.w/2, y:r.y};
+  if(side==='bottom') return {x:r.x+r.w/2, y:r.y+r.h};
+  if(side==='left')   return {x:r.x,        y:r.y+r.h/2};
+  if(side==='right')  return {x:r.x+r.w,    y:r.y+r.h/2};
+  return {x:r.x+r.w/2, y:r.y+r.h/2};
 }
 
 function autoSide(fn, tn){
@@ -1313,27 +1331,43 @@ async function apiGet(){
 }
 
 async function apiSave(task){
-  // try delete first (ignore errors if not found)
-  try {
-    await fetch(SUPA_URL + '/rest/v1/tarefas?id=eq.' + encodeURIComponent(task.id), {
-      method: 'DELETE',
-      headers: supaHeaders(),
-    });
-  } catch(e){ /* ignora */ }
-  // insert
-  const res = await fetch(SUPA_URL + '/rest/v1/tarefas', {
-    method: 'POST',
+  // SEGURANÇA: nunca deleta. Tenta UPDATE (PATCH) por id; se não existir nenhuma linha, faz INSERT.
+  if(!task.id){ throw new Error('Tarefa sem id — operação cancelada por segurança.'); }
+
+  // 1) tenta atualizar (PATCH) o registro existente
+  const patchRes = await fetch(SUPA_URL + '/rest/v1/tarefas?id=eq.' + encodeURIComponent(task.id), {
+    method: 'PATCH',
     headers: { ...supaHeaders(), 'Prefer': 'return=representation' },
     body: JSON.stringify(task),
   });
-  if(!res.ok){
-    const err = await res.text();
-    throw new Error('Erro ' + res.status + ': ' + err);
+  if(!patchRes.ok){
+    const err = await patchRes.text();
+    throw new Error('Erro ao atualizar (' + patchRes.status + '): ' + err);
   }
-  return res.json();
+  const patched = await patchRes.json();
+
+  // 2) se nenhuma linha foi afetada (array vazio), o registro não existe ainda → INSERT
+  if(Array.isArray(patched) && patched.length === 0){
+    const insertRes = await fetch(SUPA_URL + '/rest/v1/tarefas', {
+      method: 'POST',
+      headers: { ...supaHeaders(), 'Prefer': 'return=representation' },
+      body: JSON.stringify(task),
+    });
+    if(!insertRes.ok){
+      const err = await insertRes.text();
+      throw new Error('Erro ao inserir (' + insertRes.status + '): ' + err);
+    }
+    return insertRes.json();
+  }
+
+  return patched;
 }
 
 async function apiDelete(id){
+  // SEGURANÇA: nunca executa DELETE sem id válido (evita apagar a tabela inteira por engano)
+  if(!id || typeof id !== 'string' || id.trim() === ''){
+    throw new Error('ID inválido — exclusão cancelada por segurança.');
+  }
   const res = await fetch(SUPA_URL + '/rest/v1/tarefas?id=eq.' + encodeURIComponent(id), {
     method: 'DELETE',
     headers: supaHeaders(),
